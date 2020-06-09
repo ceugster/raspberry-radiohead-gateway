@@ -5,9 +5,9 @@ A Raspberry Pi Gateway based on the RadioHead library. Customized for an environ
 
 As this thread https://www.raspberrypi.org/forums/viewtopic.php?t=224035 shows, there exists a problem with raspberry, dragino lora/gps hat and radiohead. A solution is given at https://github.com/raspberrypi/linux/issues/2550#issuecomment-398412562:
 
-Update your Raspberry Pi OS
-Check if /boot/overlays/gpio-no-irq.dtbo exists. If not follow the instructions at https://github.com/raspberrypi/linux/issues/2550#issuecomment-398412562
-Add in /boot/config.txt the line dtoverlay=gpio-no-irq
-Reboot
+1. Update your Raspberry Pi OS
+2. Check if /boot/overlays/gpio-no-irq.dtbo exists. If not follow the instructions at https://github.com/raspberrypi/linux/issues/2550#issuecomment-398412562
+3. Add in /boot/config.txt the line dtoverlay=gpio-no-irq
+4. Reboot
 
 That should do it
