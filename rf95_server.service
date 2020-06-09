@@ -1,0 +1,14 @@
+[Unit]
+Description=Radio Head Server
+After=syslog.target
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/christian/Gateway/
+ExecStart=/home/christian/Gateway/rf95_server 
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
