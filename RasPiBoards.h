@@ -71,7 +71,7 @@
 #elif defined (BOARD_WAZIUP_BREAKOUT)
 #define RF_CS_PIN RPI_V2_GPIO_P1_24
 #define RF_RST_PIN RPI_V2_GPIO_P1_07
-#define RF_LED_PIN NOT_A_PIN				 // No onboard led to drive
+#define RF_LED_PIN NOT_A_PIN
 #define RF_IRQ_PIN NOT_A_PIN
 
 #else
