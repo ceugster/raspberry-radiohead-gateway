@@ -10,6 +10,7 @@
 // sudo ./rf95_server
 //
 // Contributed by Charles-Henri Hallard based on sample RH_NRF24 by Mike Poublon
+//
 // Adapted for serving mqtt server by paho.mqtt.cpp by Christian Eugster
 // 2021-12-10 changed mqtt client behaviour
 
@@ -259,13 +260,12 @@ int main(int argc, const char *argv[]) {
 						}
 						if (MQTTClient_isConnected(client)) {
 							rc = MQTTClient_publishMessage(client, topic, &pubmsg, &token);
-							if (rc != MQTTCLIENT_SUCCESS) {
-								fprintf(stderr, "Publish failed: %d\n", rc);
-								// force_exit = 1;
-							}
-							rc = MQTTClient_waitForCompletion(client, token, 60);
 							if (rc == MQTTCLIENT_SUCCESS) {
 								printf("Message with token %d delivered successfully\n", token);
+							}
+							else {
+								fprintf(stderr, "Publish failed: %d\n", rc);
+								// force_exit = 1;
 							}
 						}
 					} else {
