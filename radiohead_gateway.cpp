@@ -18,8 +18,8 @@
 #include <stdio.h>
 #include <signal.h>
 #include <unistd.h>
-#include <string.h>
-#include <chrono.h>
+#include <std::string.h>
+#include <std::chrono.h>
 
 //#include "RadioHead/RH_RF69.h"
 #include "RadioHead/RH_RF95.h"
