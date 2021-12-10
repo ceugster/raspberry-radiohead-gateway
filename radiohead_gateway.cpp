@@ -22,7 +22,7 @@
 //#include "RadioHead/RH_RF69.h"
 #include "RadioHead/RH_RF95.h"
 
-#include <MQTTClient.h>
+#include <client.h>
 #include "SimpleIni/SimpleIni.h"
 
 // define hardware used change to fit your need
@@ -51,6 +51,7 @@
 
 const auto PERIOD = seconds(5);
 const int MAX_BUFFERED_MSGS = 120;	// 120 * 5sec => 10min off-line buffering
+const int QOS = 1;
 
 // Create an instance of a driver
 RH_RF95 rf95(RF_CS_PIN, RF_IRQ_PIN);
@@ -145,29 +146,18 @@ int main(int argc, const char *argv[]) {
 
 	printf(" OK NodeID=%d @ %3.2fMHz\n", lora_node_id, lora_frequency);
 
-	MQTTClient client;
-	MQTTClient_connectOptions conn_opts = MQTTClient_connectOptions_initializer;
-	MQTTClient_message pubmsg = MQTTClient_message_initializer;
-	MQTTClient_deliveryToken token;
-	char topic[256];
-
 	printf("Create MQTT client\n");
-	int rc = MQTTClient_create(&client, mqtt_dest_addr, mqtt_client_id,
-			MQTTCLIENT_PERSISTENCE_NONE, NULL);
-	if (rc != MQTTCLIENT_SUCCESS) {
-		fprintf(stderr, "Creation of MQTT client failed\n");
-		return 1;
-	}
-	conn_opts.set_keep_alive_interval(MAX_BUFFERED_MSGS * PERIOD);
-	conn_opts.set_clean_session(true);
-	conn_opts.set_automatic_reconnect(true);
-    printf("Connect to MQTT broker on %s\n", mqtt_dest_addr);
-    rc = MQTTClient_connect(client, &conn_opts);
-    if (rc != MQTTCLIENT_SUCCESS)
-    {
-        fprintf(stderr, "Could not connect to MQTT broker: %d\n", rc);
-        return 1;
-    }
+	mqtt::client cli(mqtt_dest_addr, mqtt_client_id);
+	auto connOpts = mqtt::connect_options_builder()
+			.keep_alive_interval(MAX_BUFFERED_MSGS * PERIOD)
+			.clean_session(true)
+			.automatic_reconnect(true)
+			.finalize();
+	cli.set_timeout(seconds(3));
+	auto top = cli.get_topic(mqtt_topic, QOS);
+	printf("Connecting to server %s ", mqtt_dest_addr);
+	cli.connect(connectOpts)->wait();
+	printf("OK\n");
 
 	printf("Init RF95 module\n");
 	if (!rf95.init()) {
@@ -238,10 +228,12 @@ int main(int argc, const char *argv[]) {
 					;
 					int8_t rssi = rf95.lastRssi();
 
+					printf("Receiving lora payload ");
 					if (rf95.recv(buf, &len)) {
+						printf("OK\n");
 						time_t now = time(NULL);
-						printf("Timestamp: %s", ctime(&now));
-						printf("Packet[%02d] %ddB:\n", len, rssi);
+						printf("\nTimestamp: %s", ctime(&now));
+						printf("\nPacket[%02d] %ddB:\n", len, rssi);
 						printbuffer(buf, len);
 						printf("\n");
 
@@ -249,19 +241,15 @@ int main(int argc, const char *argv[]) {
 						pubmsg.payloadlen = len;
 						pubmsg.qos = 2;
 						pubmsg.retained = 0;
-						sprintf(topic, "%s/%s", mqtt_topic, mqtt_client_id);
-						printf("Topic: %s\n", topic);
 
-						printf("Deliver message with token %d ", token);
-						rc = MQTTClient_publishMessage(client, topic, &pubmsg, &token);
-						if (rc == MQTTCLIENT_SUCCESS) {
-							printf("OK\n");
+						printf("Publishing mqtt message with token %d", token);
+						if (!cli.is_connected()){
+							cli.reconnect();
 						}
-						else {
-							fprintf(stderr, "failed");
-						}
+						top.publish(buf);
+						cli.disconnect();
 					} else {
-						printf("receive failed\n");
+						printf("failed\n");
 					}
 				}
 #ifdef RF_IRQ_PIN
