@@ -238,7 +238,7 @@ int main(int argc, const char *argv[]) {
 						printbuffer(buf, len);
 						printf("\n");
 
-						const char buffer = (char)buf;
+						std::string buffer(buf, buf+len);
 
 						printf("Publishing mqtt message");
 						if (!client.is_connected()){
