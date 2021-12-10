@@ -49,6 +49,8 @@
 // constants with CS/IRQ/RESET/on board LED pins definition
 #include "../RasPiBoards.h"
 
+const auto KEEP_ALIVE_INTERVAL = std::chrono::seconds(1200);
+const auto 	PERIOD = std::chrono::seconds(3);
 const int MAX_BUFFERED_MSGS = 120;	// 120 * 5sec => 10min off-line buffering
 const int QOS = 1;
 
@@ -146,16 +148,16 @@ int main(int argc, const char *argv[]) {
 	printf(" OK NodeID=%d @ %3.2fMHz\n", lora_node_id, lora_frequency);
 
 	printf("Create MQTT client\n");
-	mqtt::client cli(mqtt_dest_addr, mqtt_client_id);
+	mqtt::client client(mqtt_dest_addr, mqtt_client_id);
 	auto connOpts = mqtt::connect_options_builder()
-			.keep_alive_interval(MAX_BUFFERED_MSGS * 5000)
+			.keep_alive_interval(MAX_BUFFERED_MSGS * TIMEOUT)
 			.clean_session(true)
 			.automatic_reconnect(true)
 			.finalize();
-	cli.set_timeout(3000);
-	auto top = cli.get_topic(mqtt_topic, QOS);
+	client.set_timeout(3000);
+	auto topic = cli.get_topic(mqtt_topic, QOS);
 	printf("Connecting to server %s ", mqtt_dest_addr);
-	cli.connect(connOpts)->wait();
+	cli.connect(connOpts);
 	printf("OK\n");
 
 	printf("Init RF95 module\n");
@@ -240,8 +242,9 @@ int main(int argc, const char *argv[]) {
 						if (!cli.is_connected()){
 							cli.reconnect();
 						}
-						top.publish(buf);
-						cli.disconnect();
+						auto pubmsg = mqtt::make_message(topic, buf);
+						pubmsg->set_qos(QOS);
+						client.publish(pubmsg);
 					} else {
 						printf("failed\n");
 					}
@@ -264,7 +267,7 @@ int main(int argc, const char *argv[]) {
 		}
 	}
 	cli.disconnect();
-	cli = null;
+	cli.destroy();
 
 #ifdef RF_LED_PIN
 	digitalWrite(RF_LED_PIN, LOW);
