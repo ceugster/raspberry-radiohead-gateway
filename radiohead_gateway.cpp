@@ -19,6 +19,7 @@
 #include <signal.h>
 #include <unistd.h>
 #include <string.h>
+#include <chrono.h>
 
 //#include "RadioHead/RH_RF69.h"
 #include "RadioHead/RH_RF95.h"
@@ -154,10 +155,10 @@ int main(int argc, const char *argv[]) {
 			.clean_session(true)
 			.automatic_reconnect(true)
 			.finalize();
-	client.set_timeout(3000);
+	client.set_timeout(std::chrono::seconds(3));
 	auto topic = client.get_topic(mqtt_topic, QOS);
 	printf("Connecting to server %s ", mqtt_dest_addr);
-	client.connect(connOpts);
+	client.connect(connOpts)->wait();
 	printf("OK\n");
 
 	printf("Init RF95 module\n");
@@ -239,12 +240,10 @@ int main(int argc, const char *argv[]) {
 						printf("\n");
 
 						printf("Publishing mqtt message");
-						if (!client.is_connected()){
+						if (!client.is_connected()) {
 							client.reconnect();
 						}
-						auto pubmsg = mqtt::make_message(topic, (char*)buf);
-						pubmsg->set_qos(QOS);
-						client.publish(pubmsg);
+						topic.publish(buf);
 					} else {
 						printf("failed\n");
 					}
