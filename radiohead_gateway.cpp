@@ -18,13 +18,11 @@
 #include <stdio.h>
 #include <signal.h>
 #include <unistd.h>
-#include <std::string.h>
-#include <std::chrono.h>
 
 //#include "RadioHead/RH_RF69.h"
 #include "RadioHead/RH_RF95.h"
 
-#include <mqtt/client.h>
+#include <MQTTClient.h>
 #include "SimpleIni/SimpleIni.h"
 
 // define hardware used change to fit your need
@@ -149,17 +147,33 @@ int main(int argc, const char *argv[]) {
 	printf(" OK NodeID=%d @ %3.2fMHz\n", lora_node_id, lora_frequency);
 
 	printf("Create MQTT client\n");
-	mqtt::client client(mqtt_dest_addr, mqtt_client_id);
-	auto connOpts = mqtt::connect_options_builder()
-			.keep_alive_interval(MAX_BUFFERED_MSGS * KEEP_ALIVE_INTERVAL)
-			.clean_session(true)
-			.automatic_reconnect(true)
-			.finalize();
-	client.set_timeout(std::chrono::seconds(3));
-	auto topic = client.get_topic(mqtt_topic, QOS);
-	printf("Connecting to server %s ", mqtt_dest_addr);
-	client.connect(connOpts)->wait();
-	printf("OK\n");
+	MQTTClient client;
+	MQTTClient_connectOptions connOpts = MQTTClient_connectOptions_initializer;
+	MQTTClient_message pubmsg = MQTTClient_message_initializer;
+	MQTTClient_deliveryToken token;
+
+	int rc;
+
+	printf("Create mqtt client ");
+	if ((rc = MQTTClient_create(&client, mqtt_dest_addr, mqtt_client_id, MQTTCLIENT_PERSISTENCE_NONE, NULL)) == MQTTCLIENT_SUCCESS) {
+		printf("OK\n");
+	} else {
+		printf("failed\n");
+		exit(EXIT_FAILURE);
+	}
+
+	connOpts.keep_alive_interval(1200);
+	connOpts.cleansession = 1;
+	connOpts.automatic_reconnect(true);
+
+	printf("Connect to mqtt server ");
+	printf(mqtt_dest_addr);
+	if ((rc = client.connect(client, &connOpts)) == MQTTCLIENT_SUCCESS) {
+		printf(" OK\n")
+	} else {
+		printf(" failed\n")
+
+	}
 
 	printf("Init RF95 module\n");
 	if (!rf95.init()) {
@@ -227,7 +241,6 @@ int main(int argc, const char *argv[]) {
 					uint8_t to = rf95.headerTo();
 					uint8_t id = rf95.headerId();
 					uint8_t flags = rf95.headerFlags();
-					;
 					int8_t rssi = rf95.lastRssi();
 
 					printf("Receiving lora payload ");
@@ -239,11 +252,16 @@ int main(int argc, const char *argv[]) {
 						printbuffer(buf, len);
 						printf("\n");
 
-						printf("Publishing mqtt message");
-						if (!client.is_connected()) {
-							client.reconnect();
+						pubmsg.payload = buf;
+						pubmsg.payloadlen = len;
+						pubmsg.qos = QOS;
+						pubmsg.retained = 0;
+
+						printf("Publishing mqtt message ");
+						if ((rc = MQTTClient_publishMessage(client, &pubmsg, &token)) != MQTTCLIENT_SUCCESS) {
+							printf("failed\n");
 						}
-						topic.publish(buf);
+						rc = MQTTClient_waitForCompletion(client, token, TIMEOUT);
 					} else {
 						printf("failed\n");
 					}
@@ -265,7 +283,8 @@ int main(int argc, const char *argv[]) {
 			bcm2835_delay(5);
 		}
 	}
-	client.disconnect();
+	MQTTClient_disconnect(client, 1000);
+	MQTTClient_destroy(&client);
 
 #ifdef RF_LED_PIN
 	digitalWrite(RF_LED_PIN, LOW);
