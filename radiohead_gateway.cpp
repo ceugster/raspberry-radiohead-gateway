@@ -257,7 +257,7 @@ int main(int argc, const char *argv[]) {
 						pubmsg.retained = 0;
 
 						printf(mqtt_dest_addr);
-						if (!MQTTClient_isConnected())
+						if (!MQTTClient_isConnected(client))
 						{
 							printf("Connect to mqtt server ");
 							if ((rc = MQTTClient_connect(client, &connOpts)) == MQTTCLIENT_SUCCESS) {
