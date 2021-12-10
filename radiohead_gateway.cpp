@@ -243,7 +243,7 @@ int main(int argc, const char *argv[]) {
 						if (!client.is_connected()){
 							client.reconnect();
 						}
-						auto pubmsg = mqtt::make_message(topic, &buffer);
+						auto pubmsg = mqtt::make_message(topic, buffer);
 						pubmsg->set_qos(QOS);
 						client.publish(pubmsg);
 					} else {
