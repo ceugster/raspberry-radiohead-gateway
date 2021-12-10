@@ -237,7 +237,8 @@ int main(int argc, const char *argv[]) {
 						printf("\nPacket[%02d] %ddB:\n", len, rssi);
 						printbuffer(buf, len);
 						printf("\n");
-						std::string* buffer = (std::string)buf;
+
+						const char buffer = (char)buf;
 
 						printf("Publishing mqtt message");
 						if (!client.is_connected()){
