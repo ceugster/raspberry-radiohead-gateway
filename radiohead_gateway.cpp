@@ -84,6 +84,7 @@ int main(int argc, const char *argv[]) {
 	strcpy(ini_filename, __BASEFILE__);
 	strcat(ini_filename, ini_ext);
 
+	printf("Open configuration file ");
 	printf(ini_filename);
 	printf("\n");
 
@@ -95,15 +96,15 @@ int main(int argc, const char *argv[]) {
 	printf("Content of %s%s\n", __BASEFILE__, ini_ext);
 
 	const char *mqtt_topic = ini.GetValue("mqtt", "topic", NULL);
-	printf("mqtt_topic=%s\n", mqtt_topic);
+	printf("\tmqtt_topic=%s\n", mqtt_topic);
 	const char *mqtt_dest_addr = ini.GetValue("mqtt", "dest_addr", NULL);
-	printf("mqtt_dest_addr=%s\n", mqtt_dest_addr);
+	printf("\tmqtt_dest_addr=%s\n", mqtt_dest_addr);
 	const char *mqtt_client_id = ini.GetValue("mqtt", "client_id", NULL);
-	printf("mqtt_client_id=%s\n", mqtt_client_id);
+	printf("\tmqtt_client_id=%s\n", mqtt_client_id);
 	const char *node_id = ini.GetValue("lora", "node_id", NULL);
-	printf("lora_node_id=%s\n", node_id);
+	printf("\tlora_node_id=%s\n", node_id);
 	const char *frequency = ini.GetValue("lora", "frequency", NULL);
-	printf("lora_frequency=%s\n\n", frequency);
+	printf("\tlora_frequency=%s\n\n", frequency);
 
 	uint8_t lora_node_id = (uint8_t) atoi(frequency);
 	float lora_frequency = atof(frequency);
@@ -146,7 +147,7 @@ int main(int argc, const char *argv[]) {
 
 	printf(" OK NodeID=%d @ %3.2fMHz\n", lora_node_id, lora_frequency);
 
-	printf("Create MQTT client\n");
+	printf("Create MQTT client ");
 	MQTTClient client;
 	MQTTClient_connectOptions connOpts = MQTTClient_connectOptions_initializer;
 	MQTTClient_message pubmsg = MQTTClient_message_initializer;
@@ -154,7 +155,6 @@ int main(int argc, const char *argv[]) {
 
 	int rc;
 
-	printf("Create mqtt client ");
 	if ((rc = MQTTClient_create(&client, mqtt_dest_addr, mqtt_client_id, MQTTCLIENT_PERSISTENCE_NONE, NULL)) == MQTTCLIENT_SUCCESS) {
 		printf("OK\n");
 	} else {
@@ -246,8 +246,8 @@ int main(int argc, const char *argv[]) {
 					if (rf95.recv(buf, &len)) {
 						printf("OK\n");
 						time_t now = time(NULL);
-						printf("\nTimestamp: %s", ctime(&now));
-						printf("\nPacket[%02d] %ddB:\n", len, rssi);
+						printf("\tTimestamp: %s", ctime(&now));
+						printf("\tPacket[%02d] %ddB:\n", len, rssi);
 						printbuffer(buf, len);
 						printf("\n");
 
@@ -256,10 +256,10 @@ int main(int argc, const char *argv[]) {
 						pubmsg.qos = QOS;
 						pubmsg.retained = 0;
 
-						printf(mqtt_dest_addr);
 						if (!MQTTClient_isConnected(client))
 						{
 							printf("Connect to mqtt server ");
+							printf(mqtt_dest_addr);
 							if ((rc = MQTTClient_connect(client, &connOpts)) == MQTTCLIENT_SUCCESS) {
 								printf(" OK\n");
 							} else {
@@ -271,6 +271,7 @@ int main(int argc, const char *argv[]) {
 							printf("failed\n");
 						}
 						rc = MQTTClient_waitForCompletion(client, token, TIMEOUT);
+						printf("OK\n");
 
 						MQTTClient_disconnect(client, 1000);
 					} else {
