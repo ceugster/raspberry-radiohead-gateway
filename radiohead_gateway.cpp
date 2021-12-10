@@ -49,6 +49,9 @@
 // constants with CS/IRQ/RESET/on board LED pins definition
 #include "../RasPiBoards.h"
 
+const auto PERIOD = seconds(5);
+const int MAX_BUFFERED_MSGS = 120;	// 120 * 5sec => 10min off-line buffering
+
 // Create an instance of a driver
 RH_RF95 rf95(RF_CS_PIN, RF_IRQ_PIN);
 //RH_RF95 rf95(RF_CS_PIN);
@@ -155,8 +158,16 @@ int main(int argc, const char *argv[]) {
 		fprintf(stderr, "Creation of MQTT client failed\n");
 		return 1;
 	}
-	conn_opts.keepAliveInterval = 20;
-	conn_opts.cleansession = 1;
+	conn_opts.set_keep_alive_interval(MAX_BUFFERED_MSGS * PERIOD);
+	conn_opts.set_clean_session(true);
+	conn_opts.set_automatic_reconnect(true);
+    printf("Connect to MQTT broker on %s\n", mqtt_dest_addr);
+    rc = MQTTClient_connect(client, &conn_opts);
+    if (rc != MQTTCLIENT_SUCCESS)
+    {
+        fprintf(stderr, "Could not connect to MQTT broker: %d\n", rc);
+        return 1;
+    }
 
 	printf("Init RF95 module\n");
 	if (!rf95.init()) {
@@ -241,33 +252,13 @@ int main(int argc, const char *argv[]) {
 						sprintf(topic, "%s/%s", mqtt_topic, mqtt_client_id);
 						printf("Topic: %s\n", topic);
 
-						if (!MQTTClient_isConnected(client)) {
-							printf("(Re)connecting to MQTT broker on %s ",
-									mqtt_dest_addr);
-							int count = 0;
-							while (!MQTTClient_isConnected(client)) {
-								rc = MQTTClient_connect(client, &conn_opts);
-								if (rc != MQTTCLIENT_SUCCESS) {
-									if (count == 20) {
-										printf(".\n");
-										count = 0;
-									} else {
-										printf(".");
-										count++;
-									}
-								}
-							}
+						printf("Deliver message with token %d ", token);
+						rc = MQTTClient_publishMessage(client, topic, &pubmsg, &token);
+						if (rc == MQTTCLIENT_SUCCESS) {
 							printf("OK\n");
 						}
-						if (MQTTClient_isConnected(client)) {
-							printf("Deliver message with token %d ", token);
-							rc = MQTTClient_publishMessage(client, topic, &pubmsg, &token);
-							if (rc == MQTTCLIENT_SUCCESS) {
-								printf("OK\n");
-							}
-							else {
-								fprintf(stderr, "failed");
-							}
+						else {
+							fprintf(stderr, "failed");
 						}
 					} else {
 						printf("receive failed\n");
