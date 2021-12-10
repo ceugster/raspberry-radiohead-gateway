@@ -10,6 +10,8 @@
 // sudo ./rf95_server
 //
 // Contributed by Charles-Henri Hallard based on sample RH_NRF24 by Mike Poublon
+// Adapted for serving mqtt server by paho.mqtt.cpp by Christian Eugster
+// 2021-12-10 changed mqtt client behaviour
 
 #include <bcm2835.h>
 #include <stdio.h>
