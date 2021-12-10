@@ -266,7 +266,6 @@ int main(int argc, const char *argv[]) {
 		}
 	}
 	client.disconnect();
-	client.destroy();
 
 #ifdef RF_LED_PIN
 	digitalWrite(RF_LED_PIN, LOW);
