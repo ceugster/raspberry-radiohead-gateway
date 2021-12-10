@@ -238,13 +238,11 @@ int main(int argc, const char *argv[]) {
 						printbuffer(buf, len);
 						printf("\n");
 
-						std::string buffer(buf, buf+len);
-
 						printf("Publishing mqtt message");
 						if (!client.is_connected()){
 							client.reconnect();
 						}
-						auto pubmsg = mqtt::make_message(topic, buffer);
+						auto pubmsg = mqtt::make_message(topic, (char*)buffer);
 						pubmsg->set_qos(QOS);
 						client.publish(pubmsg);
 					} else {
