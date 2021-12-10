@@ -162,16 +162,16 @@ int main(int argc, const char *argv[]) {
 		exit(EXIT_FAILURE);
 	}
 
-	connOpts.keep_alive_interval(1200);
+	connOpts.keepAliveInterval(1200);
 	connOpts.cleansession = 1;
-	connOpts.automatic_reconnect(true);
+	connOpts.automaticReconnect(true);
 
 	printf("Connect to mqtt server ");
 	printf(mqtt_dest_addr);
 	if ((rc = client.connect(client, &connOpts)) == MQTTCLIENT_SUCCESS) {
-		printf(" OK\n")
+		printf(" OK\n");
 	} else {
-		printf(" failed\n")
+		printf(" failed\n");
 
 	}
 
@@ -258,7 +258,7 @@ int main(int argc, const char *argv[]) {
 						pubmsg.retained = 0;
 
 						printf("Publishing mqtt message ");
-						if ((rc = MQTTClient_publishMessage(client, &pubmsg, &token)) != MQTTCLIENT_SUCCESS) {
+						if ((rc = MQTTClient_publishMessage(client, mqtt_topic, &pubmsg, &token)) != MQTTCLIENT_SUCCESS) {
 							printf("failed\n");
 						}
 						rc = MQTTClient_waitForCompletion(client, token, TIMEOUT);
