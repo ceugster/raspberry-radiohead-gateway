@@ -45,12 +45,12 @@
 // see https://github.com/dragino/Lora
 #define BOARD_DRAGINO_PIHAT
 
+#define TIMEOUT 10000L
+
 // Now we include RasPi_Boards.h so this will expose defined
 // constants with CS/IRQ/RESET/on board LED pins definition
 #include "../RasPiBoards.h"
 
-const auto KEEP_ALIVE_INTERVAL = std::chrono::seconds(1200);
-const int MAX_BUFFERED_MSGS = 120;	// 120 * 5sec => 10min off-line buffering
 const int QOS = 1;
 
 // Create an instance of a driver
