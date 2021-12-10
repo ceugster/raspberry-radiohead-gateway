@@ -9,12 +9,12 @@ LIBS          = -lbcm2835 -lpaho-mqtt3c
 RADIOHEADBASE = RadioHead
 INCLUDE       = -I$(RADIOHEADBASE)
 
-all: rf95_server
+all: radiohead_gateway
 
 RasPi.o: $(RADIOHEADBASE)/RHutil/RasPi.cpp
 				$(CC) $(CFLAGS) -c $(RADIOHEADBASE)/RHutil/RasPi.cpp $(INCLUDE)
 
-rf95_server.o: rf95_server.cpp
+radiohead_gateway.o: radiohead_gateway.cpp
 				$(CC) $(CFLAGS) -c $(INCLUDE) $<
 
 RH_RF95.o: $(RADIOHEADBASE)/RH_RF95.cpp
@@ -38,20 +38,20 @@ RHGenericDriver.o: $(RADIOHEADBASE)/RHGenericDriver.cpp
 RHGenericSPI.o: $(RADIOHEADBASE)/RHGenericSPI.cpp
 				$(CC) $(CFLAGS) -c $(INCLUDE) $<
 
-rf95_server: rf95_server.o RH_RF95.o RasPi.o RHDatagram.o RHReliableDatagram.o RHHardwareSPI.o RHGenericDriver.o RHGenericSPI.o RHSPIDriver.o
-				$(CC) $^ $(LIBS) -o rf95_server
+radiohead_gateway: radiohead_gateway.o RH_RF95.o RasPi.o RHDatagram.o RHReliableDatagram.o RHHardwareSPI.o RHGenericDriver.o RHGenericSPI.o RHSPIDriver.o
+				$(CC) $^ $(LIBS) -o radiohead_gateway
 
 clean:
-				rm -rf *.o rf95_server
+				rm -rf *.o radiohead_gateway
 
 install:
-	sudo cp -f ./rf95_server.service /lib/systemd/system
-	sudo systemctl enable rf95_server.service
+	sudo cp -f ./radiohead_gateway.service /lib/systemd/system
+	sudo systemctl enable radiohead_gateway.service
 	sudo systemctl daemon-reload
-	sudo systemctl start rf95_server
-	sudo systemctl status rf95_server
+	sudo systemctl start radiohead_gateway
+	sudo systemctl status radiohead_gateway
 
 uninstall:
-	sudo systemctl stop rf95_server
-	sudo systemctl disable rf95_server.service
-	sudo rm -f /lib/systemd/system/rf95_server.service
+	sudo systemctl stop radiohead_gateway
+	sudo systemctl disable radiohead_gateway.service
+	sudo rm -f /lib/systemd/system/radiohead_gateway.service
