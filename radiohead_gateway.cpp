@@ -22,7 +22,7 @@
 //#include "RadioHead/RH_RF69.h"
 #include "RadioHead/RH_RF95.h"
 
-#include <client.h>
+#include <mqtt/client.h>
 #include "SimpleIni/SimpleIni.h"
 
 // define hardware used change to fit your need
