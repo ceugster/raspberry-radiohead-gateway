@@ -18,6 +18,7 @@
 #include <stdio.h>
 #include <signal.h>
 #include <unistd.h>
+#include <string.h>
 
 //#include "RadioHead/RH_RF69.h"
 #include "RadioHead/RH_RF95.h"
