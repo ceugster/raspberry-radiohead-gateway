@@ -242,7 +242,7 @@ int main(int argc, const char *argv[]) {
 						printf("Topic: %s\n", topic);
 
 						if (!MQTTClient_isConnected(client)) {
-							printf("(Re)connecting to MQTT broker on %s\n",
+							printf("(Re)connecting to MQTT broker on %s ",
 									mqtt_dest_addr);
 							int count = 0;
 							while (!MQTTClient_isConnected(client)) {
@@ -257,15 +257,16 @@ int main(int argc, const char *argv[]) {
 									}
 								}
 							}
+							printf("OK\n");
 						}
 						if (MQTTClient_isConnected(client)) {
+							printf("Deliver message with token %d ", token);
 							rc = MQTTClient_publishMessage(client, topic, &pubmsg, &token);
 							if (rc == MQTTCLIENT_SUCCESS) {
-								printf("Message with token %d delivered successfully\n", token);
+								printf("OK\n");
 							}
 							else {
-								fprintf(stderr, "Publish failed: %d\n", rc);
-								// force_exit = 1;
+								fprintf(stderr, "failed");
 							}
 						}
 					} else {
