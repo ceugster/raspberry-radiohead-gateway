@@ -269,8 +269,8 @@ int main(int argc, const char *argv[]) {
 			bcm2835_delay(5);
 		}
 	}
-	MQTTClient_disconnect(client, 10000);
-	MQTTClient_destroy(&client);
+	cli.disconnect();
+	~cli;
 
 #ifdef RF_LED_PIN
 	digitalWrite(RF_LED_PIN, LOW);
