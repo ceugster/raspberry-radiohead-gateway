@@ -5,8 +5,8 @@ After=network.target
 
 [Service]
 Type=simple
-WorkingDirectory=/home/pi/raspberry-radiohead-gateway
-ExecStart=/home/pi/raspberry-radiohead-gateway/rf95_server 
+WorkingDirectory=/home/christian/raspberry-radiohead-gateway
+ExecStart=/home/christian/raspberry-radiohead-gateway/radiohead_gateway 
 Restart=on-failure
 RestartSec=5
 

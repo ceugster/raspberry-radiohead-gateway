@@ -19,10 +19,11 @@
 #include <signal.h>
 #include <unistd.h>
 
-//#include "RadioHead/RH_RF69.h"
 #include "RadioHead/RH_RF95.h"
+#include "RadioHead/RHDatagram.h"
 
 #include <MQTTClient.h>
+
 #include "SimpleIni/SimpleIni.h"
 
 // define hardware used change to fit your need
@@ -53,7 +54,7 @@
 
 const int QOS = 1;
 
-// Create an instance of a driver
+// Create an instance of a rf95
 RH_RF95 rf95(RF_CS_PIN, RF_IRQ_PIN);
 //RH_RF95 rf95(RF_CS_PIN);
 
@@ -106,7 +107,7 @@ int main(int argc, const char *argv[]) {
 	const char *frequency = ini.GetValue("lora", "frequency", NULL);
 	printf("\tlora_frequency=%s\n\n", frequency);
 
-	uint8_t lora_node_id = (uint8_t) atoi(frequency);
+	uint8_t lora_node_id = (uint8_t) atoi(node_id);
 	float lora_frequency = atof(frequency);
 
 	if (!bcm2835_init()) {
@@ -145,7 +146,7 @@ int main(int argc, const char *argv[]) {
 	digitalWrite(RF_LED_PIN, LOW);
 #endif
 
-	printf(" OK NodeID=%d @ %3.2fMHz\n", lora_node_id, lora_frequency);
+	printf(" OK NodeID=%u @ %3.2fMHz\n", lora_node_id, lora_frequency);
 
 	printf("Create MQTT client ");
 	MQTTClient client;
@@ -171,18 +172,20 @@ int main(int argc, const char *argv[]) {
 		printf(" OK\n");
 	} else {
 		printf(" failed\n");
-
 	}
 
-	printf("Init RF95 module\n");
-	if (!rf95.init()) {
+	printf("Init RF95 module ");
+	RHDatagram manager(rf95, lora_node_id);
+	if (!manager.init()) {
+		printf("failed\n");
 		fprintf(stderr, "RF95 module init failed, Please verify wiring/module\n");
 	} else {
+		printf("OK\n");
 		// Defaults after init are 434.0MHz, 13dBm, Bw = 125 kHz, Cr = 4/5, Sf = 128chips/symbol, CRC on
 		// The default transmitter power is 13dBm, using PA_BOOST.
 		// If you are using RFM95/96/97/98 modules which uses the PA_BOOST transmitter pin, then
 		// you can set transmitter powers from 5 to 23 dBm:
-		// driver.setTxPower(23, false);
+		// rf95.setTxPower(23, false);
 		// If you are using Modtronix inAir4 or inAir9,or any other module which uses the
 		// transmitter RFO pins and not the PA_BOOST pins
 		// then you can configure the power transmitter power for -1 to 14 dBm and with useRFO true.
@@ -211,16 +214,16 @@ int main(int argc, const char *argv[]) {
 		rf95.setPromiscuous(true);
 
 		// We're ready to listen for incoming message
-		printf("Set receive mode\n");
+		printf("Set send/receive mode to receive\n");
 		rf95.setModeRx();
 
 		//Begin the main body of code
 		while (!force_exit) {
-#ifdef RF_IRQ_PIN
 			// We have a IRQ pin ,pool it instead reading
 			// Modules IRQ registers from SPI in each loop
 
 			// Rising edge fired ?
+#ifdef RF_IRQ_PIN
 			if (bcm2835_gpio_eds(RF_IRQ_PIN)) {
 				// Now clear the eds flag by setting it to 1
 				bcm2835_gpio_set_eds(RF_IRQ_PIN);
@@ -228,7 +231,7 @@ int main(int argc, const char *argv[]) {
 #endif
 				printf("Listening...\n");
 
-				if (rf95.available()) {
+				if (manager.available()) {
 #ifdef RF_LED_PIN
 					led_blink = millis();
 					digitalWrite(RF_LED_PIN, HIGH);
@@ -236,46 +239,54 @@ int main(int argc, const char *argv[]) {
 					// Should be a message for us now
 					uint8_t buf[RH_RF95_MAX_MESSAGE_LEN];
 					uint8_t len = sizeof(buf);
-					uint16_t from = rf95.headerFrom();
-					uint8_t to = rf95.headerTo();
-					uint8_t id = rf95.headerId();
-					uint8_t flags = rf95.headerFlags();
+					uint8_t from = (uint8_t)manager.headerFrom();
+					printf("\tHeader from: %u\n", from);
+					uint8_t to = manager.headerTo();
+					printf("\tHeader to: %u\n", to);
+					uint8_t id = manager.headerId();
+					printf("\tHeader id: %u\n", id);
+					uint8_t flags = manager.headerFlags();
 					int8_t rssi = rf95.lastRssi();
 
-					printf("Receiving lora payload ");
-					if (rf95.recv(buf, &len)) {
-						printf("OK\n");
-						time_t now = time(NULL);
-						printf("\tTimestamp: %s", ctime(&now));
-						printf("\tPacket[%02d] %ddB:\n", len, rssi);
-						printbuffer(buf, len);
-						printf("\n");
+					if (to == lora_node_id)
+					{
+						printf("Receiving lora payload ");
+						if (manager.recvfrom(buf, &len, &from)) {
+							printf("OK\n");
+							time_t now = time(NULL);
+							printf("\tTimestamp: %s", ctime(&now));
+							printf("\tPacket[%02d] %ddB:\n\t", len, rssi);
+							printbuffer(buf, len);
+							printf("\n");
 
-						pubmsg.payload = buf;
-						pubmsg.payloadlen = len;
-						pubmsg.qos = QOS;
-						pubmsg.retained = 0;
+							char topic[127];
+							sprintf(topic, "%s/%u", mqtt_topic, from);
+							pubmsg.payload = buf;
+							pubmsg.payloadlen = len;
+							pubmsg.qos = QOS;
+							pubmsg.retained = 0;
 
-						if (!MQTTClient_isConnected(client))
-						{
-							printf("Connect to mqtt server ");
-							printf(mqtt_dest_addr);
-							if ((rc = MQTTClient_connect(client, &connOpts)) == MQTTCLIENT_SUCCESS) {
-								printf(" OK\n");
-							} else {
-								printf(" failed\n");
+							if (!MQTTClient_isConnected(client))
+							{
+								printf("Connect to mqtt server ");
+								printf(mqtt_dest_addr);
+								if ((rc = MQTTClient_connect(client, &connOpts)) == MQTTCLIENT_SUCCESS) {
+									printf(" OK\n");
+								} else {
+									printf(" failed\n");
+								}
 							}
-						}
-						printf("Publish mqtt message ");
-						if ((rc = MQTTClient_publishMessage(client, mqtt_topic, &pubmsg, &token)) != MQTTCLIENT_SUCCESS) {
+							printf("Publish mqtt message ");
+							if ((rc = MQTTClient_publishMessage(client, topic, &pubmsg, &token)) != MQTTCLIENT_SUCCESS) {
+								printf("failed\n");
+							}
+							rc = MQTTClient_waitForCompletion(client, token, TIMEOUT);
+							printf("OK\n");
+
+							MQTTClient_disconnect(client, 1000);
+						} else {
 							printf("failed\n");
 						}
-						rc = MQTTClient_waitForCompletion(client, token, TIMEOUT);
-						printf("OK\n");
-
-						MQTTClient_disconnect(client, 1000);
-					} else {
-						printf("failed\n");
 					}
 				}
 #ifdef RF_IRQ_PIN
